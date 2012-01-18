@@ -35,7 +35,7 @@ namespace OperationToProviderAndRequirementTRANS
             foreach(string xmlFileName in xmlFileNames)
             {
                 OperationAbstractionType fromAbs = LoadXml<OperationAbstractionType>(xmlFileName);
-                ProviderAndRequirementMetaType toAbs = TransformAbstraction(fromAbs);
+                ProviderAndRequirementECOType toAbs = TransformAbstraction(fromAbs);
                 string xmlContent = WriteToXmlString(toAbs);
                 FileInfo fInfo = new FileInfo(xmlFileName);
                 string contentFileName = "ProviderAndRequirementFrom" + fInfo.Name;
@@ -44,7 +44,7 @@ namespace OperationToProviderAndRequirementTRANS
 	        return result.ToArray();
 	    }
 
-        private string WriteToXmlString(ProviderAndRequirementMetaType toAbs)
+        private string WriteToXmlString(ProviderAndRequirementECOType toAbs)
         {
             XmlSerializer serializer = new XmlSerializer(toAbs.GetType());
             MemoryStream memoryStream = new MemoryStream();
@@ -56,10 +56,10 @@ namespace OperationToProviderAndRequirementTRANS
 
         public static OperationAbstractionType CurrSource;
 
-        public static ProviderAndRequirementMetaType TransformAbstraction(OperationAbstractionType fromAbs)
+        public static ProviderAndRequirementECOType TransformAbstraction(OperationAbstractionType fromAbs)
         {
             CurrSource = fromAbs;
-            ProviderAndRequirementMetaType toAbs = new ProviderAndRequirementMetaType
+            ProviderAndRequirementECOType toAbs = new ProviderAndRequirementECOType
                                                        {
                                                            Provides = GetProvidesData(fromAbs),
                                                            Requires = GetRequiresData(fromAbs),
@@ -74,17 +74,20 @@ namespace OperationToProviderAndRequirementTRANS
                                             {
                                                 Behaviors = GetRequiresOperations(fromAbs.Operations.Operation)
                                             };
+            if (contract.Behaviors == null || contract.Behaviors.Length == 0)
+                contract.Behaviors = null;
             return contract;
         }
 
         private static LogicalOperationSignatureType[] GetRequiresOperations(OperationType[] operations)
         {
-            return
+            var result =
                 operations.SelectMany(operation => operation.Execution.SequentialExecution).Select(
                     seqExec => seqExec as OperationExecuteType)
                     .Where(opExec => opExec != null && opExec.OperationSignature != null).Select(
                         opExec => opExec.OperationSignature)
                     .Select(ConvertOperationSignature).ToArray();
+            return result;
         }
 
         private static LogicalOperationSignatureType ConvertOperationSignature(OperationSignatureType opSignature)
@@ -164,6 +167,9 @@ namespace OperationToProviderAndRequirementTRANS
                                         {
                                             Behaviors = GetProvidesOperations(fromAbs.Operations.Operation),
                                         };
+
+            if (contract.Behaviors == null || contract.Behaviors.Length == 0)
+                contract.Behaviors = null;
             return contract;
         }
 
