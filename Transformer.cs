@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -27,14 +28,14 @@ namespace OperationToProviderAndRequirementTRANS
             }
         }
 
-
-
 	    public Tuple<string, string>[] GetGeneratorContent(params string[] xmlFileNames)
 	    {
             List<Tuple<string, string>> result = new List<Tuple<string, string>>();
             foreach(string xmlFileName in xmlFileNames)
             {
                 OperationAbstractionType fromAbs = LoadXml<OperationAbstractionType>(xmlFileName);
+                CurrSource = fromAbs;
+                CurrGitId = Path.GetFileNameWithoutExtension(xmlFileName);
                 ProviderAndRequirementECOType toAbs = TransformAbstraction(fromAbs);
                 string xmlContent = WriteToXmlString(toAbs);
                 FileInfo fInfo = new FileInfo(xmlFileName);
@@ -55,15 +56,16 @@ namespace OperationToProviderAndRequirementTRANS
         }
 
         public static OperationAbstractionType CurrSource;
+        public static string CurrGitId = null;
 
         public static ProviderAndRequirementECOType TransformAbstraction(OperationAbstractionType fromAbs)
         {
             CurrSource = fromAbs;
             ProviderAndRequirementECOType toAbs = new ProviderAndRequirementECOType
                                                        {
+                                                           //gitId = ConvertHexStringToByteArray(CurrGitId),
                                                            Provides = GetProvidesData(fromAbs),
                                                            Requires = GetRequiresData(fromAbs),
-
                                                        };
             return toAbs;
         }
@@ -180,5 +182,23 @@ namespace OperationToProviderAndRequirementTRANS
                     operation => operation.OperationSignature)
                     .Select(ConvertOperationSignature).ToArray();
         }
+
+        public static byte[] ConvertHexStringToByteArray(string hexString)
+        {
+            if (hexString.Length % 2 != 0)
+            {
+                throw new ArgumentException(String.Format(CultureInfo.InvariantCulture, "The binary key cannot have an odd number of digits: {0}", hexString));
+            }
+
+            byte[] hexAsBytes = new byte[hexString.Length / 2];
+            for (int index = 0; index < hexAsBytes.Length; index++)
+            {
+                string byteValue = hexString.Substring(index * 2, 2);
+                hexAsBytes[index] = byte.Parse(byteValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            }
+
+            return hexAsBytes;
+        } 
+
     }
 }
